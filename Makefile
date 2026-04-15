@@ -1,4 +1,4 @@
-# Eaquel_Sentinel - Root Makefile (Syntax hatası düzeltildi)
+# Eaquel_Sentinel - Root Makefile (Syntax hatası tamamen düzeltildi)
 BUILD_DIR := $(CURDIR)/build
 
 include common.mk
