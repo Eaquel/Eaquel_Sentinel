@@ -1,4 +1,4 @@
-name: CI
+name: Build
 
 on:
   push:
@@ -21,18 +21,14 @@ jobs:
         run: echo "y" | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "ndk;29.0.13113456"
 
       - name: Build
-        run: |
-          make release -j$(nproc)
-          make debug -j$(nproc)
+        run: make release -j$(nproc)
 
       - name: Upload release
         uses: actions/upload-artifact@v7
         with:
-          path: "build/out/Eaquel_Sentinel-v*-release.zip"
+          name: Eaquel_Sentinel_Release
+          path: build/out/Eaquel_Sentinel-v*-release.zip
+          if-no-files-found: error
           archive: false
-
-      - name: Upload debug
-        uses: actions/upload-artifact@v7
-        with:
-          path: "build/out/Eaquel_Sentinel-v*-debug.zip"
-          archive: false
+          compression-level: 6
+          overwrite: true
