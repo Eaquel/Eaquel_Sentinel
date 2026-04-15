@@ -1,0 +1,118 @@
+name: 🐛 Bug Report
+description: Report a bug in Eaquel Sentinel
+title: "[Bug]: "
+labels: ["bug", "not confirmed"]
+type: Bug
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!IMPORTANT]
+        > You **must** use a `-debug` build when reporting bugs. Release builds do not contain the necessary logging information.
+        > Before submitting, please search existing issues to avoid duplicates.
+
+  - type: dropdown
+    id: root_implementation
+    attributes:
+      label: Root Implementation
+      description: Which root implementation are you using?
+      options:
+        - KernelSU
+        - KernelSU Next
+        - Magisk
+        - APatch
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Eaquel Sentinel Version
+      description: Found inside the zip file under `module.prop`. Must be a `-debug` build.
+      placeholder: "e.g. v1.2.3 (000-abcd1234-debug)"
+    validations:
+      required: true
+
+  - type: input
+    id: reproducible_since
+    attributes:
+      label: Reproducible Since
+      description: The earliest version where this bug occurs. Flash older CI builds to verify.
+      placeholder: "e.g. v1.2.0 (000-wxyz5678-debug)"
+    validations:
+      required: true
+
+  - type: input
+    id: system_info
+    attributes:
+      label: Device & System
+      description: Full device name, model, Android version, ROM name and version, and security patch date.
+      placeholder: "e.g. Samsung Galaxy S23 (SM-S911B/DS), Android 14, OneUI 6.1, February 1 2024"
+    validations:
+      required: true
+
+  - type: input
+    id: root_version
+    attributes:
+      label: Root Implementation Version
+      description: Name, creator, version, and repository link of your root implementation.
+      placeholder: "e.g. KernelSU by tiann, v1.2.3, https://github.com/tiann/KernelSU"
+    validations:
+      required: true
+
+  - type: textarea
+    id: modules
+    attributes:
+      label: Installed Modules
+      description: All installed modules — enabled first, then disabled. Include status, name, creator, version, and link.
+      placeholder: |
+        Enabled. Eaquel Sentinel by Eaquel, v1.2.3, https://github.com/Eaquel/Eaquel_Sentinel
+        Disabled. SomeModule by Someone, v1.0.0, https://github.com/someone/somemodule
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear description of what is happening and what you expected to happen.
+      placeholder: "e.g. When unmounting an app via Denylist, Eaquel Sentinel causes it to crash on launch."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Exact steps to trigger the bug. Be specific enough to allow reproducibility.
+      placeholder: |
+        1. Open KernelSU and go to App Profiles
+        2. Enable custom profile and unmount the app
+        3. Launch the app
+    validations:
+      required: true
+
+  - type: input
+    id: contact
+    attributes:
+      label: Contact (Optional)
+      description: If we need more info, how can we reach you? You can also email shakeofangel@gmail.com directly.
+      placeholder: "e.g. Discord username, Telegram, or leave blank"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I am using the latest CI debug build of Eaquel Sentinel.
+          required: true
+        - label: My environment meets the minimum requirements.
+          required: true
+        - label: I have searched existing issues and confirmed this is not a duplicate.
+          required: true
+        - label: All fields above are written in English, and I can provide further information in English if needed.
+          required: true

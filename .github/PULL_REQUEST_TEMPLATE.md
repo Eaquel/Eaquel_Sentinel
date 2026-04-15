@@ -1,17 +1,20 @@
+## Summary
+
+Briefly describe what this PR does and why.
+
 ## Changes
 
-Write here about the changes you've made
+List the key changes made in this PR.
 
-## Why 
+- 
 
-Write here why you think this should be merged
+## Related Issues
 
-## Checkmarks
+Closes #
 
-- [ ] The modified functions have been tested.
-- [ ] Used the same indentation as the rest of the project.
-- [ ] Updated documentation (changelog).
+## Checklist
 
-## Additional information
-
-If you have any additional information, write it here
+- [ ] Code has been tested and works as expected.
+- [ ] Follows the same code style and indentation as the rest of the project.
+- [ ] Changelog has been updated if applicable.
+- [ ] No unnecessary files or debug code included.

@@ -1,1 +1,9 @@
 blank_issues_enabled: false
+
+contact_links:
+  - name: 💬 Community Discussions
+    url: https://github.com/Eaquel/Eaquel_Sentinel/discussions
+    about: Ask questions and discuss ideas with the community.
+  - name: 📧 Contact
+    url: mailto:shakeofangel@gmail.com
+    about: Reach out directly for sensitive issues or inquiries.

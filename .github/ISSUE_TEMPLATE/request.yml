@@ -1,0 +1,49 @@
+name: 🚀 Feature Request
+description: Suggest a new feature or improvement for Eaquel Sentinel
+title: "[Feature]: "
+labels: ["enhancement", "not confirmed"]
+type: Feature
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!NOTE]
+        > Please search existing issues and discussions before submitting to avoid duplicates.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: A clear and concise description of the feature you are requesting.
+      placeholder: "e.g. Add support for per-app mount namespace isolation."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Motivation
+      description: Why should this feature be added? What problem does it solve or what value does it bring?
+      placeholder: "e.g. This would allow finer control over which apps can see mounted paths, improving compatibility with banking apps."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: "e.g. Currently I work around this by using Denylist globally, but it breaks other apps."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: This feature is not already implemented in the latest version.
+          required: true
+        - label: I have searched existing issues and confirmed this is not a duplicate request.
+          required: true
