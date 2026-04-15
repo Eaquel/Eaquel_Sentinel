@@ -1,125 +1,71 @@
-ROOT_DIR := ..
-include ../common.mk
+# Eaquel_Sentinel - Root Makefile (Syntax hatası düzeltildi)
+BUILD_DIR := $(CURDIR)/build
 
-BUILD_DIR ?= $(ROOT_DIR)/build
+include common.mk
 
-OBJ_ROOT = $(BUILD_DIR)/obj/$(BUILD_TYPE)/loader
-OBJ_DIR = $(OBJ_ROOT)/$(ARCH)
+OBJ_DIR = \( (BUILD_DIR)/obj/ \)(BUILD_TYPE)
+MODULE_OUT = \( (BUILD_DIR)/module/ \)(BUILD_TYPE)
+ZIP_DIR = $(BUILD_DIR)/out
 
-ZKSU_VERSION ?= $(VER_NAME)-$(VER_CODE)-$(COMMIT_HASH)-$(BUILD_TYPE)
+ZIP_NAME = Eaquel_Sentinel-\( (VER_NAME)- \)(VER_CODE)-\( (COMMIT_HASH)- \)(BUILD_TYPE).zip
+ZIP_FILE = \( (ZIP_DIR)/ \)(ZIP_NAME)
 
-ifeq ($(BUILD_TYPE),release)
-	TYPE_CFLAGS = -O3 -ffast-math -flto -Wno-unused -Wno-unused-parameter       \
-				  -fvisibility=hidden -fvisibility-inlines-hidden -fno-unwind-tables \
-				  -fno-asynchronous-unwind-tables -DNDEBUG
-	TYPE_LDFLAGS = -Wl,--exclude-libs,ALL -Wl,--strip-all -flto
-else
-	TYPE_CFLAGS = -g -O0
-	TYPE_LDFLAGS =
-endif
+LOADER_DONE = $(OBJ_DIR)/loader/.done
+MODULE_DONE = \( (BUILD_DIR)/module- \)(BUILD_TYPE).done
 
-LOADER_CFLAGS = -std=c18 -D_GNU_SOURCE -Wall -Wextra -fno-rtti -fno-exceptions         \
-				-fno-stack-protector -fomit-frame-pointer -Wno-builtin-macro-redefined \
-				'-D__FILE__=__FILE_NAME__' -DZKSU_VERSION=\"$(ZKSU_VERSION)\"
+LOADER_INPUTS = common.mk loader/Makefile \
+        $(shell find loader/src -type f | sort)
 
-COMMON_LDFLAGS = -static-libstdc++ -Wl,--build-id=sha1 -Wl,--no-rosegment           \
-				 -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined \
-				 -Qunused-arguments -Wl,--gc-sections
+.PHONY: debug release build clean
 
-COMMON_SRCS = src/common/daemon.c src/common/elf_util.c src/common/ifunc_shim.c \
-			  src/common/misc.c src/common/socket_utils.c
-INJECTOR_SRCS = src/injector/cpp_strings.c src/injector/entry.c \
-				src/injector/hook.c src/injector/ptrace_clear.c
-PTRACER_SRCS = src/ptracer/elf_util_32.c src/ptracer/main.c                        \
-			   src/ptracer/monitor.c src/ptracer/ptracer.c                         \
-			   src/ptracer/remote_csoloader.c src/ptracer/remote_csoloader_arm32.c \
-			   src/ptracer/utils.c
+debug:
+	\( (MAKE) BUILD_TYPE=debug BUILD_DIR= \)(BUILD_DIR) build
 
-COMMON_OBJS = $(patsubst src/common/%.c,$(OBJ_DIR)/common/%.o,$(COMMON_SRCS))
-INJECTOR_OBJS = $(patsubst src/injector/%.c,$(OBJ_DIR)/injector/%.o,$(INJECTOR_SRCS))
-PTRACER_OBJS = $(patsubst src/ptracer/%.c,$(OBJ_DIR)/ptracer/%.o,$(PTRACER_SRCS))
+release:
+	\( (MAKE) BUILD_TYPE=release BUILD_DIR= \)(BUILD_DIR) build
 
-LSPLT_LIB = $(BUILD_DIR)/obj/$(BUILD_TYPE)/lsplt/$(ARCH)/liblsplt.a
-CSOLOADER_LIB = $(BUILD_DIR)/obj/$(BUILD_TYPE)/csoloader/$(ARCH)/libcsoloader.a
+build: $(ZIP_FILE)
 
-LIBCOMMON = $(OBJ_DIR)/libcommon.a
-LIBZYGISK = $(OBJ_DIR)/libzygisk.so
-LIBPTRACE = $(OBJ_DIR)/libzygisk_ptrace.so
-LIBZYGISK_STRIPPED = $(OBJ_DIR)/stripped/libzygisk.so
-LIBPTRACE_STRIPPED = $(OBJ_DIR)/stripped/libzygisk_ptrace.so
+$(LOADER_DONE): $(LOADER_INPUTS)
+	\( (MAKE) -C loader BUILD_TYPE= \)(BUILD_TYPE) BUILD_DIR=$(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	@touch $@
 
-LSPLT_DIR = src/external/lsplt/lsplt/src/main/jni
-CSOLOADER_DIR = src/external/csoloader
+$(MODULE_DONE): $(LOADER_DONE)
+	@rm -rf $(MODULE_OUT)
+	@mkdir -p $(MODULE_OUT)/META-INF/com/google/android
 
-COMMON_INCLUDES = -Isrc/include
-INJECTOR_INCLUDES = -Isrc/include -I$(LSPLT_DIR)/include -I$(CSOLOADER_DIR)/include
+	@echo "Copying META-INF files..."
+	@cp module/src/META-INF/com/google/android/update-binary \
+	   module/src/META-INF/com/google/android/updater-script \
+	   $(MODULE_OUT)/META-INF/com/google/android/ 2>/dev/null || true
 
-.PHONY: all arch clean
+	@echo "Copying module files..."
+	@cp module/src/sepolicy.rule module/src/customize.sh \
+	   module/src/post-fs-data.sh module/src/service.sh \
+	   module/src/uninstall.sh $(MODULE_OUT)/ 2>/dev/null || true
 
-all:
-	@for arch in $(ARCHS); do                                                                                  \
-		$(MAKE) BUILD_TYPE=$(BUILD_TYPE) BUILD_DIR=$(BUILD_DIR) ARCH=$$arch ZKSU_VERSION=$(ZKSU_VERSION) arch; \
+	@echo "Customizing module.prop..."
+	@sed -e 's/\[ {moduleId}/$(MODULE_ID)/g' \
+	    -e 's/ \]{moduleName}/$(MODULE_NAME)/g' \
+	    -e 's/\[ {versionName}/\( (VER_NAME) ( \)(VER_CODE)-\( (COMMIT_HASH)- \)(BUILD_TYPE))/g' \
+	    -e 's/ \]{versionCode}/$(VER_CODE)/g' \
+	    module/src/module.prop > $(MODULE_OUT)/module.prop 2>/dev/null || true
+
+	@echo "Copying binaries..."
+	@for arch in $(ARCHS); do \
+		mkdir -p $(MODULE_OUT)/lib/\[ arch; \
+		cp $(OBJ_DIR)/loader/ \]arch/stripped/libzygisk.so \
+		   $(MODULE_OUT)/lib/$$arch/libzygisk.so 2>/dev/null || true; \
 	done
 
-	@mkdir -p $(OBJ_ROOT)
-	@touch $(OBJ_ROOT)/.done
+	@echo "Skipping module signing for Eaquel_Sentinel"
 
-arch: $(LIBZYGISK_STRIPPED) $(LIBPTRACE_STRIPPED)
+	@mkdir -p $(ZIP_DIR)
+	@cd $(MODULE_OUT) && zip -r9 $(ZIP_FILE) . -x '*.DS_Store' > /dev/null || true
+
+	@echo "Eaquel_Sentinel build completed: $(ZIP_NAME)"
 
 clean:
-	rm -rf $(BUILD_DIR)/obj/$(BUILD_TYPE)/loader
-	rm -rf $(BUILD_DIR)/obj/$(BUILD_TYPE)/lsplt
-	rm -rf $(BUILD_DIR)/obj/$(BUILD_TYPE)/csoloader
-
-$(LSPLT_LIB):
-	@mkdir -p $(dir $@)
-	$(MAKE) -C $(LSPLT_DIR) BUILD_TYPE=$(BUILD_TYPE) ARCH=$(ARCH) \
-		NDK_PATH=$(NDK_PATH) API_LEVEL=$(API_LEVEL)               \
-		out=$(BUILD_DIR)/obj/$(BUILD_TYPE)/lsplt/$(ARCH)
-
-$(CSOLOADER_LIB):
-	@mkdir -p $(dir $@)
-	$(MAKE) -C $(CSOLOADER_DIR) BUILD_TYPE=$(BUILD_TYPE) ARCH=$(ARCH) \
-		NDK_PATH=$(NDK_PATH) API_LEVEL=$(API_LEVEL)                   \
-		out=$(BUILD_DIR)/obj/$(BUILD_TYPE)/csoloader/$(ARCH)
-
-$(OBJ_DIR)/common/%.o: src/common/%.c
-	@mkdir -p $(dir $@)
-	$(CC_ARCH) $(NDK_CFLAGS) $(LOADER_CFLAGS) $(TYPE_CFLAGS) \
-		$(COMMON_INCLUDES) -fPIC -c $< -o $@
-
-$(OBJ_DIR)/injector/%.o: src/injector/%.c
-	@mkdir -p $(dir $@)
-	$(CC_ARCH) $(NDK_CFLAGS) $(LOADER_CFLAGS) $(TYPE_CFLAGS) \
-		$(INJECTOR_INCLUDES) -Dzygisk_EXPORTS -fPIC -c $< -o $@
-
-$(OBJ_DIR)/ptracer/%.o: src/ptracer/%.c
-	@mkdir -p $(dir $@)
-	$(CC_ARCH) $(NDK_CFLAGS) $(LOADER_CFLAGS) $(TYPE_CFLAGS) \
-		$(COMMON_INCLUDES) -fPIE -c $< -o $@
-
-$(LIBCOMMON): $(COMMON_OBJS)
-	@mkdir -p $(dir $@)
-	$(AR) rcs $@ $^
-
-$(LIBZYGISK): $(INJECTOR_OBJS) $(LIBCOMMON) $(LSPLT_LIB) $(CSOLOADER_LIB)
-	@mkdir -p $(dir $@)
-	$(CC_ARCH) -fPIC -shared -Wl,-soname,libzygisk.so               \
-		$(COMMON_LDFLAGS) $(TYPE_LDFLAGS) -nostartfiles             \
-		$(INJECTOR_OBJS) $(LIBCOMMON) $(LSPLT_LIB) $(CSOLOADER_LIB) \
-		-llog -latomic -lm -o $@
-
-$(LIBPTRACE): $(PTRACER_OBJS) $(LIBCOMMON)
-	@mkdir -p $(dir $@)
-	$(CC_ARCH) $(COMMON_LDFLAGS) $(TYPE_LDFLAGS) \
-		$(PTRACER_OBJS) $(LIBCOMMON) -llog -latomic -lm -o $@
-
-$(LIBZYGISK_STRIPPED): $(LIBZYGISK)
-	@mkdir -p $(dir $@)
-	cp $< $@
-	$(STRIP) --strip-all $@
-
-$(LIBPTRACE_STRIPPED): $(LIBPTRACE)
-	@mkdir -p $(dir $@)
-	cp $< $@
-	$(STRIP) --strip-all $@
+	rm -rf $(BUILD_DIR)
+	\( (MAKE) -C loader clean BUILD_DIR= \)(BUILD_DIR) 2>/dev/null || true

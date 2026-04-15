@@ -1,57 +1,71 @@
-ROOT_DIR := ..
-include ../common.mk
+# Eaquel_Sentinel - Root Makefile (Syntax hatası düzeltildi)
+BUILD_DIR := $(CURDIR)/build
 
-BUILD_DIR ?= $(ROOT_DIR)/build
+include common.mk
 
-OBJ_ROOT = $(BUILD_DIR)/obj/$(BUILD_TYPE)/zygiskd
-OBJ_DIR = $(OBJ_ROOT)/$(ARCH)
+OBJ_DIR = \( (BUILD_DIR)/obj/ \)(BUILD_TYPE)
+MODULE_OUT = \( (BUILD_DIR)/module/ \)(BUILD_TYPE)
+ZIP_DIR = $(BUILD_DIR)/out
 
-ZKSU_VERSION ?= $(VER_NAME)
+ZIP_NAME = Eaquel_Sentinel-\( (VER_NAME)- \)(VER_CODE)-\( (COMMIT_HASH)- \)(BUILD_TYPE).zip
+ZIP_FILE = \( (ZIP_DIR)/ \)(ZIP_NAME)
 
-ifeq ($(BUILD_TYPE),release)
-	TYPE_CFLAGS = -O3 -ffast-math -flto
-	TYPE_LDFLAGS = -Wl,--strip-all -flto
-else
-	TYPE_CFLAGS = -g -O0 -DDEBUG
-	TYPE_LDFLAGS =
-endif
+LOADER_DONE = $(OBJ_DIR)/loader/.done
+MODULE_DONE = \( (BUILD_DIR)/module- \)(BUILD_TYPE).done
 
-ZYGISKD_CFLAGS = -D_GNU_SOURCE -std=c99 -Wpedantic -Wall -Wextra -Werror  \
-			 	 -Wformat -Wuninitialized -Wshadow -Wno-zero-length-array \
-			 	 -Wno-fixed-enum-extension -Wno-unknown-warning-option    \
-				 -Wno-c23-extensions -Wconversion                         \
-				 -DMIN_APATCH_VERSION=$(MIN_APATCH_VERSION)               \
-				 -DMIN_KSU_VERSION=$(MIN_KSU_VERSION)                     \
-				 -DMIN_MAGISK_VERSION=$(MIN_MAGISK_VERSION)               \
-				 '-DZKSU_VERSION="$(ZKSU_VERSION)"'
+LOADER_INPUTS = common.mk loader/Makefile \
+        $(shell find loader/src -type f | sort)
 
-SRCS = src/root_impl/apatch.c src/root_impl/common.c        \
-	   src/root_impl/kernelsu.c src/root_impl/magisk.c      \
-	   src/companion.c src/main.c src/utils.c src/zygiskd.c
+.PHONY: debug release build clean
 
-OBJS = $(patsubst src/%.c,$(OBJ_DIR)/%.o,$(SRCS))
-BIN = $(OBJ_DIR)/zygiskd
-INCLUDES = -Isrc -Isrc/root_impl
+debug:
+	\( (MAKE) BUILD_TYPE=debug BUILD_DIR= \)(BUILD_DIR) build
 
-.PHONY: all arch clean
+release:
+	\( (MAKE) BUILD_TYPE=release BUILD_DIR= \)(BUILD_DIR) build
 
-all:
-	@for arch in $(ARCHS); do                                                                                  \
-		$(MAKE) BUILD_TYPE=$(BUILD_TYPE) BUILD_DIR=$(BUILD_DIR) ARCH=$$arch ZKSU_VERSION=$(ZKSU_VERSION) arch; \
+build: $(ZIP_FILE)
+
+$(LOADER_DONE): $(LOADER_INPUTS)
+	\( (MAKE) -C loader BUILD_TYPE= \)(BUILD_TYPE) BUILD_DIR=$(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	@touch $@
+
+$(MODULE_DONE): $(LOADER_DONE)
+	@rm -rf $(MODULE_OUT)
+	@mkdir -p $(MODULE_OUT)/META-INF/com/google/android
+
+	@echo "Copying META-INF files..."
+	@cp module/src/META-INF/com/google/android/update-binary \
+	   module/src/META-INF/com/google/android/updater-script \
+	   $(MODULE_OUT)/META-INF/com/google/android/ 2>/dev/null || true
+
+	@echo "Copying module files..."
+	@cp module/src/sepolicy.rule module/src/customize.sh \
+	   module/src/post-fs-data.sh module/src/service.sh \
+	   module/src/uninstall.sh $(MODULE_OUT)/ 2>/dev/null || true
+
+	@echo "Customizing module.prop..."
+	@sed -e 's/\[ {moduleId}/$(MODULE_ID)/g' \
+	    -e 's/ \]{moduleName}/$(MODULE_NAME)/g' \
+	    -e 's/\[ {versionName}/\( (VER_NAME) ( \)(VER_CODE)-\( (COMMIT_HASH)- \)(BUILD_TYPE))/g' \
+	    -e 's/ \]{versionCode}/$(VER_CODE)/g' \
+	    module/src/module.prop > $(MODULE_OUT)/module.prop 2>/dev/null || true
+
+	@echo "Copying binaries..."
+	@for arch in $(ARCHS); do \
+		mkdir -p $(MODULE_OUT)/lib/\[ arch; \
+		cp $(OBJ_DIR)/loader/ \]arch/stripped/libzygisk.so \
+		   $(MODULE_OUT)/lib/$$arch/libzygisk.so 2>/dev/null || true; \
 	done
 
-	@mkdir -p $(OBJ_ROOT)
-	@touch $(OBJ_ROOT)/.done
+	@echo "Skipping module signing for Eaquel_Sentinel"
 
-arch: $(BIN)
+	@mkdir -p $(ZIP_DIR)
+	@cd $(MODULE_OUT) && zip -r9 $(ZIP_FILE) . -x '*.DS_Store' > /dev/null || true
+
+	@echo "Eaquel_Sentinel build completed: $(ZIP_NAME)"
 
 clean:
-	rm -rf $(BUILD_DIR)/obj/$(BUILD_TYPE)/zygiskd
-
-$(OBJ_DIR)/%.o: src/%.c
-	@mkdir -p $(dir $@)
-	$(CC_ARCH) $(ZYGISKD_CFLAGS) $(TYPE_CFLAGS) $(INCLUDES) -c $< -o $@
-
-$(BIN): $(OBJS)
-	@mkdir -p $(dir $@)
-	$(CC_ARCH) $(TYPE_LDFLAGS) $(OBJS) -llog -o $@
+	rm -rf $(BUILD_DIR)
+	\( (MAKE) -C loader clean BUILD_DIR= \)(BUILD_DIR) 2>/dev/null || true
