@@ -23,14 +23,10 @@ jobs:
       - name: Build
         run: make release -j$(nproc)
 
-      - name: Extract and Prep
-        run: |
-          mkdir -p dist
-          unzip build/out/*.zip -d dist/
-
-      - name: Upload Artifact
+      - name: Upload Release Artifact
         uses: actions/upload-artifact@v7
         with:
           name: Eaquel_Sentinel_Release
-          path: dist/
+          path: build/out/*.zip
           if-no-files-found: error
+          compression-level: 0
